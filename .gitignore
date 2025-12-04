@@ -1,0 +1,54 @@
+# --- SISTEMA OPERATIVO ---
+.DS_Store
+Thumbs.db
+
+# --- PYTHON / DJANGO (Backend) ---
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# Archivos compilados y caché
+__pycache__/
+*.pyc
+*.pyo
+
+# Variables de entorno (¡MUY IMPORTANTE!)
+.env
+.env.local
+
+# Base de datos local (Opcional: Si quieres subir tu DB de prueba, quita esta línea)
+db.sqlite3
+
+# Archivos estáticos y media subidos por usuarios
+backend/media/
+backend/staticfiles/
+
+# --- FLUTTER / DART (Móvil) ---
+# Archivos de compilación (pesan mucho y se generan solos)
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+
+# Archivos generados de Android
+movil/android/local.properties
+movil/android/.gradle
+movil/android/app/build/
+
+# Archivos generados de iOS
+movil/ios/.generated/
+movil/ios/Flutter/Generated.xcconfig
+movil/ios/Flutter/flutter_export_environment.sh
+
+# --- ARCHIVOS SECRETOS DE FIREBASE (¡CRÍTICO!) ---
+# La llave del Backend
+serviceAccountKey.json
+
+# La configuración de la App Móvil
+google-services.json
+GoogleService-Info.plist
+
+# Logs de errores
+*.log
