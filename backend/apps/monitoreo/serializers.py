@@ -47,3 +47,4 @@ class DashboardHijoSerializer(serializers.ModelSerializer):
             coords = obj.institucion.area.coords[0]
             return [{"lat": p[1], "lng": p[0]} for p in coords]
         return []
+    

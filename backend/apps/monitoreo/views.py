@@ -47,7 +47,6 @@ class ReportarUbicacionView(APIView):
                             titulo="🚨 ALERTA DE SEGURIDAD",
                             cuerpo=f"{nino.nombre} ha salido de la zona segura ({nino.institucion.nombre})."
                         )
-            
             # 4. Actualizar estado del niño
             nino.ultima_ubicacion = punto_actual
             nino.last_status = mensaje
