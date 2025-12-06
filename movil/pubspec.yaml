@@ -45,6 +45,8 @@ dependencies:
   shared_preferences: ^2.5.3
   flutter_local_notifications: ^19.5.0
   battery_plus: ^7.0.0
+   # QR Scanner
+  mobile_scanner: ^5.2.3
 
 dev_dependencies:
   flutter_test:
