@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:battery_plus/battery_plus.dart';
+import 'config/api_config.dart';
 
 class SafeKidHome extends StatefulWidget {
   final String deviceId;
@@ -18,7 +19,7 @@ class SafeKidHome extends StatefulWidget {
 
 class _SafeKidHomeState extends State<SafeKidHome> with WidgetsBindingObserver {
   // CONFIGURA TU IP AQUÍ
-  final String backendUrl = "http://192.168.0.32:8000/api/monitoreo/reportar/";
+  final String backendUrl = "${ApiConfig.baseUrl}/api/monitoreo/reportar/";
 
   String _estado = "Inicializando...";
   Color _colorEstado = Colors.grey;
