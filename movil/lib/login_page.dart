@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dashboard_padre_page.dart'; 
+import 'dashboard_padre_page.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'config/api_config.dart';
 
@@ -13,7 +13,8 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final _userController = TextEditingController();
   final _passController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -46,33 +47,54 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   Future<void> _login() async {
     setState(() => _loading = true);
     final url = Uri.parse("${ApiConfig.baseUrl}/api/login/");
-    
+
     try {
-      final response = await http.post(url, body: {
-        "username": _userController.text,
-        "password": _passController.text,
-      });
+      final response = await http.post(
+        url,
+        body: {
+          "username": _userController.text,
+          "password": _passController.text,
+        },
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        String token = data['access'];
-        
+
+        // El backend devuelve `access_token` (o a veces `access`).
+        // Manejar ambos y verificar null para evitar el error de tipo.
+        final dynamic maybeToken = data['access'] ?? data['access_token'];
+
+        if (maybeToken == null || maybeToken is! String) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Error obteniendo token")),
+          );
+          return;
+        }
+
+        final String token = maybeToken;
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', token);
         await _registrarTokenBackend(token);
 
-        if(mounted) {
-            Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const DashboardPadrePage()));
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const DashboardPadrePage()),
+          );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Credenciales incorrectas")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Credenciales incorrectas")),
+        );
       }
     } catch (e) {
       print(e);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Error de conexión")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Error de conexión")));
     } finally {
-      if(mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -81,16 +103,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     try {
       String? fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken != null) {
-        final url = Uri.parse("${ApiConfig.baseUrl}/api/usuarios/registrar-token/");
+        final url = Uri.parse(
+          "${ApiConfig.baseUrl}/api/usuarios/registrar-token/",
+        );
         await http.post(
           url,
           headers: {
-            "Authorization": "Bearer $jwtToken", 
+            "Authorization": "Bearer $jwtToken",
             "Content-Type": "application/json",
           },
-          body: jsonEncode({
-            "fcm_token": fcmToken
-          }),
+          body: jsonEncode({"fcm_token": fcmToken}),
         );
         print("Token FCM enviado al servidor: $fcmToken");
       }
@@ -143,9 +165,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         color: Colors.white,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Título
                     const Text(
                       "Protección Infantil",
@@ -156,9 +178,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         letterSpacing: 1.2,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     Text(
                       "Sistema de Monitoreo y Seguridad",
                       style: TextStyle(
@@ -167,9 +189,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         fontWeight: FontWeight.w300,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 48),
-                    
+
                     // Card del formulario
                     Container(
                       padding: const EdgeInsets.all(28),
@@ -200,7 +222,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               },
                               decoration: InputDecoration(
                                 labelText: "Usuario / Tutor",
-                                prefixIcon: const Icon(Icons.account_circle_outlined, color: Color(0xFF3B82F6)),
+                                prefixIcon: const Icon(
+                                  Icons.account_circle_outlined,
+                                  color: Color(0xFF3B82F6),
+                                ),
                                 filled: true,
                                 fillColor: const Color(0xFFF1F5F9),
                                 border: OutlineInputBorder(
@@ -213,18 +238,26 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF3B82F6),
+                                    width: 2,
+                                  ),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: Colors.red, width: 2),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
                                 ),
-                                labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                                labelStyle: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                ),
                               ),
                             ),
-                            
+
                             const SizedBox(height: 20),
-                            
+
                             // Campo Contraseña
                             TextFormField(
                               controller: _passController,
@@ -237,10 +270,15 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               },
                               decoration: InputDecoration(
                                 labelText: "Contraseña",
-                                prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF3B82F6)),
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline,
+                                  color: Color(0xFF3B82F6),
+                                ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                    _obscurePassword
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
                                     color: const Color(0xFF64748B),
                                   ),
                                   onPressed: () {
@@ -261,18 +299,26 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 ),
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF3B82F6),
+                                    width: 2,
+                                  ),
                                 ),
                                 errorBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(16),
-                                  borderSide: const BorderSide(color: Colors.red, width: 2),
+                                  borderSide: const BorderSide(
+                                    color: Colors.red,
+                                    width: 2,
+                                  ),
                                 ),
-                                labelStyle: const TextStyle(color: Color(0xFF64748B)),
+                                labelStyle: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                ),
                               ),
                             ),
-                            
+
                             const SizedBox(height: 12),
-                            
+
                             // Link "Olvidé mi contraseña"
                             Align(
                               alignment: Alignment.centerRight,
@@ -289,18 +335,21 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                 ),
                               ),
                             ),
-                            
+
                             const SizedBox(height: 24),
-                            
+
                             // Botón de login
                             SizedBox(
                               height: 56,
                               child: ElevatedButton(
-                                onPressed: _loading ? null : () {
-                                  if (_formKey.currentState?.validate() ?? false) {
-                                    _login();
-                                  }
-                                },
+                                onPressed: _loading
+                                    ? null
+                                    : () {
+                                        if (_formKey.currentState?.validate() ??
+                                            false) {
+                                          _login();
+                                        }
+                                      },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF3B82F6),
                                   foregroundColor: Colors.white,
@@ -308,7 +357,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
-                                  disabledBackgroundColor: const Color(0xFF94A3B8),
+                                  disabledBackgroundColor: const Color(
+                                    0xFF94A3B8,
+                                  ),
                                 ),
                                 child: _loading
                                     ? const SizedBox(
@@ -316,7 +367,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                                         height: 24,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2.5,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
                                         ),
                                       )
                                     : const Text(
@@ -333,9 +387,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Footer
                     Text(
                       "© 2025 Sistema de Seguridad Infantil - Santa Cruz",
