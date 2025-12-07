@@ -1,4 +1,4 @@
-// movil/lib/modo_nino_page.dart
+// movil/lib/modo_nino_page.darteso
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -26,6 +26,9 @@ class _SafeKidHomeState extends State<SafeKidHome> with WidgetsBindingObserver {
   bool _rastreando = false;
   Timer? _timer;
   String _miToken = "...";
+  int _intervaloSegundos = 15; // Intervalo inicial de 15 segundos para enviar la ubicación actual
+  // en modo seguro =15 segundos, fuera de zona =5 segundos
+  // _cambiarIntervalo() hace eso
 
   @override
   void initState() {
@@ -123,8 +126,15 @@ class _SafeKidHomeState extends State<SafeKidHome> with WidgetsBindingObserver {
             final seguro = r['seguro'];
             if (seguro is bool) {
               _colorEstado = seguro ? Colors.green : Colors.red;
+              if (seguro) {
+                // Está dentro del área: intervalos normales (15s)
+                _cambiarIntervalo(15);
+              } else {
+                // Está fuera del área: intervalos cortos (10s) para seguimiento rápido
+                _cambiarIntervalo(10); // 10 por ahora, manda mucha notificaciones
+              }
             } else {
-              _colorEstado = Colors.green;
+              _colorEstado = Colors.orange;
             }
           });
         }
@@ -146,6 +156,23 @@ class _SafeKidHomeState extends State<SafeKidHome> with WidgetsBindingObserver {
     }
   }
 
+  void _cambiarIntervalo(int nuevoIntervalo) {
+    if (_intervaloSegundos == nuevoIntervalo) return; // No cambiar si es igual
+
+    setState(() {
+      _intervaloSegundos = nuevoIntervalo;
+    });
+
+    // Si está rastreando, reinicia el timer con el nuevo intervalo
+    if (_rastreando) {
+      _timer?.cancel();
+      _timer = Timer.periodic(
+        Duration(seconds: _intervaloSegundos),
+        (t) => _reportarUbicacion(),
+      );
+    }
+  }
+
   void _toggleRastreo() {
     if (_rastreando) {
       _timer?.cancel();
@@ -157,7 +184,7 @@ class _SafeKidHomeState extends State<SafeKidHome> with WidgetsBindingObserver {
     } else {
       // Recomiendo >=15s en producción
       _timer = Timer.periodic(
-        const Duration(seconds: 15),
+        Duration(seconds: _intervaloSegundos),
         (t) => _reportarUbicacion(),
       );
       setState(() {

@@ -55,7 +55,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        String token = data['access'];
+        print(data);
+        String token = data['access_token'];
         
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', token);

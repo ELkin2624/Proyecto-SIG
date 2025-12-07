@@ -16,7 +16,6 @@ import 'widgets/marcador_movimiento_widget.dart';
 import 'widgets/particula_animada_widget.dart';
 import 'models/ruta_historial.dart';
 
-
 class DashboardPadrePage extends StatefulWidget {
   const DashboardPadrePage({super.key});
 
@@ -24,34 +23,35 @@ class DashboardPadrePage extends StatefulWidget {
   State<DashboardPadrePage> createState() => _DashboardPadrePageState();
 }
 
-class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProviderStateMixin {
+class _DashboardPadrePageState extends State<DashboardPadrePage>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final MapController _mapController = MapController();
-  
+
   // Datos
   List<dynamic> _listaHijosJson = [];
   List<Marker> _marcadores = [];
   List<Polygon> _geocercas = [];
   Map<String, RutaHistorial> _historialPorHijo = {};
-  
+
   bool _cargando = true;
   bool _mostrandoHistorial = false;
   String _usuarioNombre = "Tutor";
   Timer? _timerActualizacion;
   DateTime _fechaSeleccionada = DateTime.now();
-  
+
   // Animación del historial
   AnimationController? _animController;
   AnimationController? _speedController;
   double _progresoAnimacion = 0.0;
   bool _animacionActiva = false;
   double _velocidadReproduccion = 1.0;
-  
+
   // Vista 3D y efectos
   bool _vista3D = false;
   bool _mostrarEstadisticas = true;
   bool _mostrarHeatmap = false;
   String? _hijoSeleccionado;
-  
+
   // Línea de tiempo interactiva
   bool _lineaTiempoExpandida = false;
 
@@ -66,29 +66,34 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    )..addListener(() {
-      setState(() => _progresoAnimacion = _animController!.value);
-    })..addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        setState(() => _animacionActiva = false);
-      }
-    });
-    
+    WidgetsBinding.instance.addObserver(this);
+    _animController =
+        AnimationController(vsync: this, duration: const Duration(seconds: 8))
+          ..addListener(() {
+            setState(() => _progresoAnimacion = _animController!.value);
+          })
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed) {
+              setState(() => _animacionActiva = false);
+            }
+          });
+
     _speedController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    
+
     _cargarPerfil();
     _actualizarDatos();
-    _timerActualizacion = Timer.periodic(const Duration(seconds: 10), (t) => _actualizarDatos());
+    _timerActualizacion = Timer.periodic(
+      const Duration(seconds: 5),
+      (t) => _actualizarDatos(),
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timerActualizacion?.cancel();
     _animController?.dispose();
     _speedController?.dispose();
@@ -96,7 +101,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
   }
 
   Future<void> _cargarPerfil() async {
-    setState(() => _usuarioNombre = "Padre de Familia"); 
+    setState(() => _usuarioNombre = "Padre de Familia");
   }
 
   Future<void> _seleccionarFecha() async {
@@ -137,13 +142,18 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
     if (token == null) return;
 
     try {
-      final url = Uri.parse("${ApiConfig.baseUrl}/api/monitoreo/dashboard-unificado/");
-      final response = await http.get(url, headers: {"Authorization": "Bearer $token"});
+      final url = Uri.parse(
+        "${ApiConfig.baseUrl}/api/monitoreo/dashboard-unificado/",
+      );
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
 
       if (response.statusCode == 200) {
         final List<dynamic> datosHijos = jsonDecode(response.body);
         _procesarDatosMapa(datosHijos);
-        
+
         if (mounted) {
           setState(() {
             _listaHijosJson = datosHijos;
@@ -163,27 +173,26 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
 
     for (var hijo in hijos) {
       Color color = _colores[idxColor % _colores.length];
-      
+
       if (hijo['ubicacion_actual'] != null) {
         double lat = hijo['ubicacion_actual']['lat'];
         double lng = hijo['ubicacion_actual']['lng'];
-        
+
         nuevosMarcadores.add(
           Marker(
             point: LatLng(lat, lng),
             width: 100,
             height: 100,
-            child: UbicacionActualMarker(
-              nombre: hijo['nombre'],
-              color: color,
-            ),
-          )
+            child: UbicacionActualMarker(nombre: hijo['nombre'], color: color),
+          ),
         );
       }
 
       List<dynamic> polyCoords = hijo['poligono_kinder'];
       if (polyCoords.isNotEmpty) {
-        List<LatLng> puntos = polyCoords.map((p) => LatLng(p['lat'], p['lng'])).toList();
+        List<LatLng> puntos = polyCoords
+            .map((p) => LatLng(p['lat'], p['lng']))
+            .toList();
         nuevasGeocercas.add(
           Polygon(
             points: puntos,
@@ -197,7 +206,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
               fontSize: 14,
               shadows: [Shadow(color: Colors.white, blurRadius: 4)],
             ),
-          )
+          ),
         );
       }
       idxColor++;
@@ -225,7 +234,9 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
   }
 
   void _iniciarAnimacion() {
-    _animController?.duration = Duration(milliseconds: (8000 / _velocidadReproduccion).round());
+    _animController?.duration = Duration(
+      milliseconds: (8000 / _velocidadReproduccion).round(),
+    );
     _animController?.reset();
     _animController?.forward();
     setState(() => _animacionActiva = true);
@@ -254,10 +265,12 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
       } else {
         _velocidadReproduccion = 1.0;
       }
-      
+
       if (_animacionActiva) {
         final currentValue = _animController!.value;
-        _animController?.duration = Duration(milliseconds: (8000 / _velocidadReproduccion).round());
+        _animController?.duration = Duration(
+          milliseconds: (8000 / _velocidadReproduccion).round(),
+        );
         _animController?.forward(from: currentValue);
       }
     });
@@ -269,29 +282,39 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
       await _cargarHistorialUnico(
         hijo['device_id'],
         hijo['nombre'],
-        _colores[idx % _colores.length]
+        _colores[idx % _colores.length],
       );
       idx++;
     }
   }
 
-  Future<void> _cargarHistorialUnico(String deviceId, String nombre, Color color) async {
+  Future<void> _cargarHistorialUnico(
+    String deviceId,
+    String nombre,
+    Color color,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
-    
-    String fechaStr = "${_fechaSeleccionada.year}-${_fechaSeleccionada.month.toString().padLeft(2,'0')}-${_fechaSeleccionada.day.toString().padLeft(2,'0')}";
-    final url = Uri.parse("${ApiConfig.baseUrl}/api/monitoreo/historial/$deviceId/?fecha=$fechaStr");
-    
+
+    String fechaStr =
+        "${_fechaSeleccionada.year}-${_fechaSeleccionada.month.toString().padLeft(2, '0')}-${_fechaSeleccionada.day.toString().padLeft(2, '0')}";
+    final url = Uri.parse(
+      "${ApiConfig.baseUrl}/api/monitoreo/historial/$deviceId/?fecha=$fechaStr",
+    );
+
     try {
-      final response = await http.get(url, headers: {"Authorization": "Bearer $token"});
+      final response = await http.get(
+        url,
+        headers: {"Authorization": "Bearer $token"},
+      );
       if (response.statusCode == 200) {
         List<dynamic> raw = jsonDecode(response.body);
-        
+
         if (raw.length < 2) return;
 
         List<PuntoHistorial> puntos = [];
         double distanciaTotal = 0.0;
-        
+
         for (int i = 0; i < raw.length; i++) {
           final punto = PuntoHistorial(
             latLng: LatLng(raw[i]['lat'], raw[i]['lng']),
@@ -299,11 +322,14 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             indice: i,
             totalPuntos: raw.length,
           );
-          
+
           if (i > 0) {
-            distanciaTotal += _calcularDistancia(puntos[i-1].latLng, punto.latLng);
+            distanciaTotal += _calcularDistancia(
+              puntos[i - 1].latLng,
+              punto.latLng,
+            );
           }
-          
+
           puntos.add(punto);
         }
 
@@ -329,12 +355,15 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
     final lat2 = p2.latitude * math.pi / 180;
     final deltaLat = (p2.latitude - p1.latitude) * math.pi / 180;
     final deltaLng = (p2.longitude - p1.longitude) * math.pi / 180;
-    
-    final a = math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
-              math.cos(lat1) * math.cos(lat2) *
-              math.sin(deltaLng / 2) * math.sin(deltaLng / 2);
+
+    final a =
+        math.sin(deltaLat / 2) * math.sin(deltaLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(deltaLng / 2) *
+            math.sin(deltaLng / 2);
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    
+
     return earthRadius * c;
   }
 
@@ -351,23 +380,26 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
 
   List<Widget> _construirCapasHistorial() {
     List<Widget> capas = [];
-    
+
     _historialPorHijo.forEach((nombre, ruta) {
       // Filtrar si hay selección
       if (_hijoSeleccionado != null && _hijoSeleccionado != nombre) {
         return;
       }
-      
+
       int puntosVisibles = (_progresoAnimacion * ruta.puntos.length).round();
       if (puntosVisibles < 2) return;
-      
-      List<PuntoHistorial> puntosActuales = ruta.puntos.sublist(0, puntosVisibles);
-      
+
+      List<PuntoHistorial> puntosActuales = ruta.puntos.sublist(
+        0,
+        puntosVisibles,
+      );
+
       // Heatmap (zonas donde pasó más tiempo)
       if (_mostrarHeatmap) {
         capas.add(_construirHeatmap(ruta, puntosActuales));
       }
-      
+
       // Línea principal con efecto de brillo
       capas.add(
         PolylineLayer(
@@ -383,45 +415,52 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
               points: puntosActuales.map((p) => p.latLng).toList(),
               color: ruta.color,
               strokeWidth: 6.0,
-              gradientColors: _generarGradienteProgresivo(ruta.color, puntosActuales.length),
+              gradientColors: _generarGradienteProgresivo(
+                ruta.color,
+                puntosActuales.length,
+              ),
             ),
           ],
-        )
+        ),
       );
-      
+
       // Partículas animadas en movimiento
       if (_animacionActiva && puntosActuales.length > 2) {
         capas.add(_construirParticulas(puntosActuales, ruta.color));
       }
-      
+
       // Marcadores
       List<Marker> marcadoresHistorial = [];
-      
+
       // Punto inicial con animación
       if (puntosActuales.isNotEmpty) {
-        marcadoresHistorial.add(_crearMarcadorInicio(puntosActuales.first, ruta.color, nombre));
+        marcadoresHistorial.add(
+          _crearMarcadorInicio(puntosActuales.first, ruta.color, nombre),
+        );
       }
-      
+
       // Puntos de interés (detenciones prolongadas)
       final puntosInteres = _detectarPuntosInteres(puntosActuales);
       for (var punto in puntosInteres) {
         marcadoresHistorial.add(_crearMarcadorInteres(punto, ruta.color));
       }
-      
+
       // Marcador en movimiento (posición actual en la animación)
       if (puntosActuales.length > 1) {
-        marcadoresHistorial.add(_crearMarcadorMovimiento(puntosActuales.last, ruta.color, nombre));
+        marcadoresHistorial.add(
+          _crearMarcadorMovimiento(puntosActuales.last, ruta.color, nombre),
+        );
       }
-      
+
       capas.add(MarkerLayer(markers: marcadoresHistorial));
     });
-    
+
     return capas;
   }
 
   Widget _construirHeatmap(RutaHistorial ruta, List<PuntoHistorial> puntos) {
     List<CircleMarker> circles = [];
-    
+
     for (int i = 0; i < puntos.length; i++) {
       circles.add(
         CircleMarker(
@@ -434,7 +473,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
         ),
       );
     }
-    
+
     return CircleLayer(circles: circles);
   }
 
@@ -442,23 +481,21 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
     List<Color> gradiente = [];
     for (int i = 0; i < puntos; i++) {
       double progress = i / puntos;
-      gradiente.add(Color.lerp(
-        baseColor.withOpacity(0.5),
-        baseColor,
-        progress,
-      )!);
+      gradiente.add(
+        Color.lerp(baseColor.withOpacity(0.5), baseColor, progress)!,
+      );
     }
     return gradiente;
   }
 
   Widget _construirParticulas(List<PuntoHistorial> puntos, Color color) {
     List<Marker> particulas = [];
-    
+
     // Crear 3 partículas que se mueven a lo largo de la ruta
     for (int i = 0; i < 3; i++) {
       double offset = (i / 3.0 + _progresoAnimacion) % 1.0;
       int index = (offset * (puntos.length - 1)).round();
-      
+
       if (index < puntos.length) {
         particulas.add(
           Marker(
@@ -470,25 +507,33 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
         );
       }
     }
-    
+
     return MarkerLayer(markers: particulas);
   }
 
   List<PuntoHistorial> _detectarPuntosInteres(List<PuntoHistorial> puntos) {
     List<PuntoHistorial> interes = [];
-    
+
     for (int i = 5; i < puntos.length - 5; i += 10) {
       // Detectar si estuvo quieto (baja variación de posición)
-      double distancia = _calcularDistancia(puntos[i-5].latLng, puntos[i].latLng);
-      if (distancia < 50) { // Menos de 50 metros en 10 puntos
+      double distancia = _calcularDistancia(
+        puntos[i - 5].latLng,
+        puntos[i].latLng,
+      );
+      if (distancia < 50) {
+        // Menos de 50 metros en 10 puntos
         interes.add(puntos[i]);
       }
     }
-    
+
     return interes;
   }
 
-  Marker _crearMarcadorInicio(PuntoHistorial punto, Color color, String nombre) {
+  Marker _crearMarcadorInicio(
+    PuntoHistorial punto,
+    Color color,
+    String nombre,
+  ) {
     return Marker(
       point: punto.latLng,
       width: 120,
@@ -513,7 +558,11 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
     );
   }
 
-  Marker _crearMarcadorMovimiento(PuntoHistorial punto, Color color, String nombre) {
+  Marker _crearMarcadorMovimiento(
+    PuntoHistorial punto,
+    Color color,
+    String nombre,
+  ) {
     return Marker(
       point: punto.latLng,
       width: 140,
@@ -539,7 +588,11 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
   Future<void> _cerrarSesion() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('jwt_token');
-    if (mounted) Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginPage()));
+    if (mounted)
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
   }
 
   void _centrarEnHijo(dynamic hijo) {
@@ -557,84 +610,90 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
       backgroundColor: Colors.grey.shade100,
       appBar: _buildAppBar(),
       drawer: _buildDrawer(),
-      body: _cargando 
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: Colors.blue.shade700),
-                const SizedBox(height: 16),
-                Text("Cargando datos...", style: TextStyle(color: Colors.grey.shade600)),
-              ],
-            ),
-          )
-        : Stack(
-            children: [
-              // Mapa
-              FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: const LatLng(-17.78, -63.18),
-                  initialZoom: 13,
-                  maxZoom: 18,
-                  minZoom: 10,
-                ),
+      body: _cargando
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  TileLayer(
-                    urlTemplate: _vista3D 
-                      ? 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
-                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.movil',
-                    subdomains: const ['a', 'b', 'c'],
+                  CircularProgressIndicator(color: Colors.blue.shade700),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Cargando datos...",
+                    style: TextStyle(color: Colors.grey.shade600),
                   ),
-                  PolygonLayer(polygons: _geocercas),
-                  if (_mostrandoHistorial) ..._construirCapasHistorial(),
-                  if (!_mostrandoHistorial) MarkerLayer(markers: _marcadores),
                 ],
               ),
-              
-              // Panel de control superior (estadísticas)
-              if (_mostrandoHistorial && _mostrarEstadisticas)
-                Positioned(
-                  top: 16,
-                  left: 16,
-                  right: 16,
-                  child: _buildEstadisticasPanel(),
+            )
+          : Stack(
+              children: [
+                // Mapa
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: const LatLng(-17.78, -63.18),
+                    initialZoom: 13,
+                    maxZoom: 18,
+                    minZoom: 10,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: _vista3D
+                          ? 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
+                          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.movil',
+                      subdomains: const ['a', 'b', 'c'],
+                    ),
+                    PolygonLayer(polygons: _geocercas),
+                    if (_mostrandoHistorial) ..._construirCapasHistorial(),
+                    if (!_mostrandoHistorial) MarkerLayer(markers: _marcadores),
+                  ],
                 ),
-              
-              // Línea de tiempo interactiva (lateral)
-              if (_mostrandoHistorial)
-                Positioned(
-                  right: 16,
-                  top: MediaQuery.of(context).size.height * 0.25,
-                  bottom: 180,
-                  child: _buildLineaTiempoVertical(),
-                ),
-              
-              // Panel de control principal (inferior)
-              if (_mostrandoHistorial)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildPanelControl(),
-                ),
-              
-              // Botones flotantes de opciones
-              if (_mostrandoHistorial)
-                Positioned(
-                  left: 16,
-                  bottom: 200,
-                  child: _buildBotonesOpciones(),
-                ),
-            ],
-          ),
+
+                // Panel de control superior (estadísticas)
+                if (_mostrandoHistorial && _mostrarEstadisticas)
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    right: 16,
+                    child: _buildEstadisticasPanel(),
+                  ),
+
+                // Línea de tiempo interactiva (lateral)
+                if (_mostrandoHistorial)
+                  Positioned(
+                    right: 16,
+                    top: MediaQuery.of(context).size.height * 0.25,
+                    bottom: 180,
+                    child: _buildLineaTiempoVertical(),
+                  ),
+
+                // Panel de control principal (inferior)
+                if (_mostrandoHistorial)
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: _buildPanelControl(),
+                  ),
+
+                // Botones flotantes de opciones
+                if (_mostrandoHistorial)
+                  Positioned(
+                    left: 16,
+                    bottom: 200,
+                    child: _buildBotonesOpciones(),
+                  ),
+              ],
+            ),
     );
   }
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      title: const Text("Centro de Monitoreo", style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text(
+        "Centro de Monitoreo",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
       elevation: 0,
       flexibleSpace: Container(
         decoration: BoxDecoration(
@@ -658,8 +717,10 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             color: _mostrandoHistorial ? Colors.yellowAccent : null,
           ),
           onPressed: _toggleHistorial,
-          tooltip: _mostrandoHistorial ? "Ver Mapa en Tiempo Real" : "Ver Historial",
-        )
+          tooltip: _mostrandoHistorial
+              ? "Ver Mapa en Tiempo Real"
+              : "Ver Historial",
+        ),
       ],
     );
   }
@@ -675,7 +736,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -732,7 +793,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             color: ruta.color.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -784,7 +845,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             color: Colors.white.withOpacity(0.9),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)
+              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8),
             ],
           ),
           child: const Column(
@@ -794,14 +855,17 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
               SizedBox(height: 8),
               RotatedBox(
                 quarterTurns: 3,
-                child: Text("TIMELINE", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                child: Text(
+                  "TIMELINE",
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
         ),
       );
     }
-    
+
     return Container(
       width: 200,
       padding: const EdgeInsets.all(12),
@@ -809,7 +873,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
         ],
       ),
       child: Column(
@@ -817,7 +881,10 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Línea de Tiempo", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              const Text(
+                "Línea de Tiempo",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
               IconButton(
                 icon: const Icon(Icons.close, size: 18),
                 onPressed: () => setState(() => _lineaTiempoExpandida = false),
@@ -842,7 +909,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
   Widget _buildItemLineaTiempo(String nombre, RutaHistorial ruta) {
     bool isSeleccionado = _hijoSeleccionado == nombre;
     int puntosVisibles = (_progresoAnimacion * ruta.puntos.length).round();
-    
+
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -853,7 +920,9 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isSeleccionado ? ruta.color.withOpacity(0.1) : Colors.transparent,
+          color: isSeleccionado
+              ? ruta.color.withOpacity(0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSeleccionado ? ruta.color : Colors.grey.shade300,
@@ -901,7 +970,9 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
     return Column(
       children: [
         _buildBotonOpcion(
-          icon: _mostrarHeatmap ? Icons.bubble_chart : Icons.bubble_chart_outlined,
+          icon: _mostrarHeatmap
+              ? Icons.bubble_chart
+              : Icons.bubble_chart_outlined,
           label: "Heatmap",
           activo: _mostrarHeatmap,
           onTap: () => setState(() => _mostrarHeatmap = !_mostrarHeatmap),
@@ -942,12 +1013,16 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
               color: Colors.black.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
-            )
+            ),
           ],
         ),
         child: Column(
           children: [
-            Icon(icon, color: activo ? Colors.white : Colors.grey.shade700, size: 24),
+            Icon(
+              icon,
+              color: activo ? Colors.white : Colors.grey.shade700,
+              size: 24,
+            ),
             const SizedBox(height: 4),
             Text(
               label,
@@ -976,7 +1051,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             color: Colors.black.withOpacity(0.15),
             blurRadius: 20,
             offset: const Offset(0, -5),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -992,7 +1067,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -1001,7 +1076,10 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         borderRadius: BorderRadius.circular(20),
@@ -1009,7 +1087,11 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.calendar_today, size: 14, color: Colors.blue.shade700),
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: Colors.blue.shade700,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             "${_fechaSeleccionada.day}/${_fechaSeleccionada.month}/${_fechaSeleccionada.year}",
@@ -1023,10 +1105,13 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                       ),
                     ),
                     const Spacer(),
-                    
+
                     // Velocidad
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.orange.shade50,
                         borderRadius: BorderRadius.circular(20),
@@ -1036,7 +1121,11 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.speed, size: 14, color: Colors.orange.shade700),
+                            Icon(
+                              Icons.speed,
+                              size: 14,
+                              color: Colors.orange.shade700,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               "${_velocidadReproduccion}x",
@@ -1051,7 +1140,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                       ),
                     ),
                     const SizedBox(width: 12),
-                    
+
                     // Botón reiniciar
                     _buildControlButton(
                       icon: Icons.replay,
@@ -1059,7 +1148,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                       onPressed: _iniciarAnimacion,
                     ),
                     const SizedBox(width: 8),
-                    
+
                     // Botón play/pause
                     _buildControlButton(
                       icon: _animacionActiva ? Icons.pause : Icons.play_arrow,
@@ -1069,9 +1158,9 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Slider de progreso mejorado
                 Column(
                   children: [
@@ -1081,8 +1170,12 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                         inactiveTrackColor: Colors.grey.shade300,
                         thumbColor: Colors.blue.shade700,
                         overlayColor: Colors.blue.withOpacity(0.2),
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 8,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 16,
+                        ),
                         trackHeight: 6,
                       ),
                       child: Slider(
@@ -1107,7 +1200,10 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                         children: [
                           Text(
                             "Inicio",
-                            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                           Text(
                             "${(_progresoAnimacion * 100).round()}%",
@@ -1119,16 +1215,19 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                           ),
                           Text(
                             "Fin",
-                            style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Leyenda de hijos
                 Wrap(
                   spacing: 12,
@@ -1143,14 +1242,19 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: isSeleccionado 
-                            ? entry.value.color.withOpacity(0.2)
-                            : Colors.grey.shade100,
+                          color: isSeleccionado
+                              ? entry.value.color.withOpacity(0.2)
+                              : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: isSeleccionado ? entry.value.color : Colors.transparent,
+                            color: isSeleccionado
+                                ? entry.value.color
+                                : Colors.transparent,
                             width: 2,
                           ),
                         ),
@@ -1168,7 +1272,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                                     color: entry.value.color.withOpacity(0.5),
                                     blurRadius: 4,
                                     spreadRadius: 1,
-                                  )
+                                  ),
                                 ],
                               ),
                             ),
@@ -1177,8 +1281,12 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                               entry.key,
                               style: TextStyle(
                                 fontSize: 11,
-                                fontWeight: isSeleccionado ? FontWeight.bold : FontWeight.normal,
-                                color: isSeleccionado ? entry.value.color : Colors.black87,
+                                fontWeight: isSeleccionado
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isSeleccionado
+                                    ? entry.value.color
+                                    : Colors.black87,
                               ),
                             ),
                           ],
@@ -1210,7 +1318,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             color: color.withOpacity(0.4),
             blurRadius: 8,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: IconButton(
@@ -1238,7 +1346,10 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             UserAccountsDrawerHeader(
               accountName: Text(
                 _usuarioNombre,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
               accountEmail: const Text("Tutor Principal"),
               currentAccountPicture: Container(
@@ -1246,7 +1357,10 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 8,
+                    ),
                   ],
                 ),
                 child: const CircleAvatar(
@@ -1266,7 +1380,11 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(Icons.family_restroom, size: 20, color: Colors.blue.shade700),
+                  Icon(
+                    Icons.family_restroom,
+                    size: 20,
+                    color: Colors.blue.shade700,
+                  ),
                   const SizedBox(width: 8),
                   const Text(
                     "MIS HIJOS",
@@ -1279,7 +1397,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                 ],
               ),
             ),
-            
+
             ..._listaHijosJson.asMap().entries.map((entry) {
               var hijo = entry.value;
               Color color = _colores[entry.key % _colores.length];
@@ -1293,7 +1411,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                       color: Colors.black.withOpacity(0.05),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
-                    )
+                    ),
                   ],
                 ),
                 child: ListTile(
@@ -1307,7 +1425,10 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                   ),
                   title: Text(
                     hijo['nombre'],
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                   subtitle: Row(
                     children: [
@@ -1341,7 +1462,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
                 ),
               );
             }),
-            
+
             const SizedBox(height: 16),
             const Divider(),
             ListTile(
