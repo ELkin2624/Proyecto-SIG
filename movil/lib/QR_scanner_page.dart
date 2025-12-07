@@ -1,3 +1,4 @@
+// movil/lib/QR_scanner_page.dart
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 

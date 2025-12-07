@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'config/api_config.dart';
+import 'package:flutter/services.dart'; // para HapticFeedback
 
 class SafeKidHome extends StatefulWidget {
   final String deviceId;
@@ -191,9 +192,106 @@ class _SafeKidHomeState extends State<SafeKidHome> with WidgetsBindingObserver {
               onPressed: _toggleRastreo,
               child: Text(_rastreando ? "DETENER" : "ACTIVAR"),
             ),
+            const SizedBox(height: 20),
+            // Botón SOS
+            Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.withOpacity(0.5),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: InkWell(
+                onLongPress: _enviarSOS,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.sos, size: 50, color: Colors.white),
+                    Text(
+                      "MANTÉN PARA\nAYUDA",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _enviarSOS() async {
+    if (!mounted) return;
+    HapticFeedback.heavyImpact();
+    setState(() {
+      _estado = "Enviando SOS...";
+      _colorEstado = Colors.red;
+    });
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+      var battery = Battery();
+      int nivelBateria = await battery.batteryLevel;
+
+      Map<String, dynamic> data = {
+        "device_id": widget.deviceId,
+        "latitud": position.latitude,
+        "longitud": position.longitude,
+        "fcm_token": _miToken,
+        "timestamp": DateTime.now().toIso8601String(),
+        "bateria": nivelBateria,
+        "es_sos": true,
+      };
+
+      final response = await http
+          .post(
+            Uri.parse(backendUrl),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final r = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            _estado = r['mensaje'] ?? "SOS Enviado";
+            _colorEstado = Colors.red;
+          });
+          HapticFeedback.heavyImpact();
+          await Future.delayed(const Duration(milliseconds: 200));
+          HapticFeedback.heavyImpact();
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _estado = "Error servidor ${response.statusCode}";
+            _colorEstado = Colors.orange;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _estado = "Error conexión SOS";
+          _colorEstado = Colors.red;
+        });
+      }
+    }
   }
 }

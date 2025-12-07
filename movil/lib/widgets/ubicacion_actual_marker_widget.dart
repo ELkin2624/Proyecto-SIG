@@ -1,5 +1,5 @@
+// movil/lib/widgets/ubicacion_actual_marker_widget.dart
 import 'package:flutter/material.dart';
-
 
 class UbicacionActualMarker extends StatelessWidget {
   final String nombre;

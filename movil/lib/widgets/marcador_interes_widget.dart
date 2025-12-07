@@ -1,4 +1,4 @@
-
+// movil/lib/widgets/marcador_interes_widget.dart
 import 'package:flutter/material.dart';
 
 class MarcadorInteresWidget extends StatelessWidget {

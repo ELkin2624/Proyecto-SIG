@@ -1,3 +1,4 @@
+// movil/lib/widgets/marcadores_inicio_widget.dart
 import 'package:flutter/material.dart';
 
 class MarcadorInicioWidget extends StatelessWidget {

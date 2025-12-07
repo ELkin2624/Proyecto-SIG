@@ -1,3 +1,4 @@
+// movil/lib/widgets/particula_animada_widget.dart
 import 'package:flutter/material.dart';
 
 class ParticulaAnimada extends StatefulWidget {
