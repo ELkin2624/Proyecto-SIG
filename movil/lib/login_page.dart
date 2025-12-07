@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_padre_page.dart'; 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'config/api_config.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -44,7 +45,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   Future<void> _login() async {
     setState(() => _loading = true);
-    final url = Uri.parse("http://192.168.0.32:8000/api/login/");
+    final url = Uri.parse("${ApiConfig.baseUrl}/api/login/");
     
     try {
       final response = await http.post(url, body: {
@@ -80,7 +81,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     try {
       String? fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken != null) {
-        final url = Uri.parse("http://192.168.0.32:8000/api/usuarios/registrar-token/");
+        final url = Uri.parse("${ApiConfig.baseUrl}/api/usuarios/registrar-token/");
         await http.post(
           url,
           headers: {

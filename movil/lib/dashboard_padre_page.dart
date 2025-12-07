@@ -8,6 +8,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'login_page.dart';
+import 'config/api_config.dart';
+import 'widgets/ubicacion_actual_marker_widget.dart';
+import 'widgets/marcadores_inicio_widget.dart';
+import 'widgets/marcador_interes_widget.dart';
+import 'widgets/marcador_movimiento_widget.dart';
+import 'widgets/particula_animada_widget.dart';
+import 'models/ruta_historial.dart';
+
 
 class DashboardPadrePage extends StatefulWidget {
   const DashboardPadrePage({super.key});
@@ -129,7 +137,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
     if (token == null) return;
 
     try {
-      final url = Uri.parse("http://192.168.0.32:8000/api/monitoreo/dashboard-unificado/");
+      final url = Uri.parse("${ApiConfig.baseUrl}/api/monitoreo/dashboard-unificado/");
       final response = await http.get(url, headers: {"Authorization": "Bearer $token"});
 
       if (response.statusCode == 200) {
@@ -165,7 +173,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             point: LatLng(lat, lng),
             width: 100,
             height: 100,
-            child: _UbicacionActualMarker(
+            child: UbicacionActualMarker(
               nombre: hijo['nombre'],
               color: color,
             ),
@@ -272,7 +280,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
     final token = prefs.getString('jwt_token');
     
     String fechaStr = "${_fechaSeleccionada.year}-${_fechaSeleccionada.month.toString().padLeft(2,'0')}-${_fechaSeleccionada.day.toString().padLeft(2,'0')}";
-    final url = Uri.parse("http://192.168.0.32:8000/api/monitoreo/historial/$deviceId/?fecha=$fechaStr");
+    final url = Uri.parse("${ApiConfig.baseUrl}/api/monitoreo/historial/$deviceId/?fecha=$fechaStr");
     
     try {
       final response = await http.get(url, headers: {"Authorization": "Bearer $token"});
@@ -457,7 +465,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
             point: puntos[index].latLng,
             width: 20,
             height: 20,
-            child: _ParticulaAnimada(color: color),
+            child: ParticulaAnimada(color: color),
           ),
         );
       }
@@ -485,7 +493,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
       point: punto.latLng,
       width: 120,
       height: 120,
-      child: _MarcadorInicioWidget(
+      child: MarcadorInicioWidget(
         nombre: nombre,
         hora: _formatearHora(punto.timestamp),
         color: color,
@@ -498,7 +506,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
       point: punto.latLng,
       width: 50,
       height: 50,
-      child: _MarcadorInteresWidget(
+      child: MarcadorInteresWidget(
         hora: _formatearHora(punto.timestamp),
         color: color,
       ),
@@ -510,7 +518,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
       point: punto.latLng,
       width: 140,
       height: 140,
-      child: _MarcadorMovimientoWidget(
+      child: MarcadorMovimientoWidget(
         nombre: nombre,
         hora: _formatearHora(punto.timestamp),
         color: color,
@@ -1355,422 +1363,6 @@ class _DashboardPadrePageState extends State<DashboardPadrePage> with TickerProv
           ],
         ),
       ),
-    );
-  }
-}
-
-// ==================== CLASES DE DATOS ====================
-class PuntoHistorial {
-  final LatLng latLng;
-  final String timestamp;
-  final int indice;
-  final int totalPuntos;
-
-  PuntoHistorial({
-    required this.latLng,
-    required this.timestamp,
-    required this.indice,
-    required this.totalPuntos,
-  });
-}
-
-class RutaHistorial {
-  final List<PuntoHistorial> puntos;
-  final Color color;
-  final double distanciaTotal;
-  final Duration tiempoTotal;
-
-  RutaHistorial({
-    required this.puntos,
-    required this.color,
-    required this.distanciaTotal,
-    required this.tiempoTotal,
-  });
-}
-
-// ==================== WIDGETS PERSONALIZADOS ====================
-class _UbicacionActualMarker extends StatelessWidget {
-  final String nombre;
-  final Color color;
-
-  const _UbicacionActualMarker({
-    required this.nombre,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Colors.white, Colors.grey.shade50],
-            ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              )
-            ],
-          ),
-          child: Text(
-            nombre,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-            ),
-            Icon(Icons.person_pin_circle, color: color, size: 44),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MarcadorInicioWidget extends StatelessWidget {
-  final String nombre;
-  final String hora;
-  final Color color;
-
-  const _MarcadorInicioWidget({
-    required this.nombre,
-    required this.hora,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              )
-            ],
-          ),
-          child: Column(
-            children: [
-              Text(
-                nombre,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const Text(
-                "INICIO",
-                style: TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                hora,
-                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.3),
-                shape: BoxShape.circle,
-              ),
-            ),
-            Container(
-              width: 16,
-              height: 16,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.5),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  )
-                ],
-              ),
-              child: const Icon(Icons.flag, color: Colors.white, size: 8),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MarcadorInteresWidget extends StatelessWidget {
-  final String hora;
-  final Color color;
-
-  const _MarcadorInteresWidget({
-    required this.hora,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.5), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-              )
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.pause_circle, size: 10, color: color),
-              const SizedBox(width: 3),
-              Text(
-                hora,
-                style: TextStyle(fontSize: 8, color: color, fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 3),
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.7),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _MarcadorMovimientoWidget extends StatelessWidget {
-  final String nombre;
-  final String hora;
-  final Color color;
-  final bool animando;
-
-  const _MarcadorMovimientoWidget({
-    required this.nombre,
-    required this.hora,
-    required this.color,
-    required this.animando,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.center,
-      children: [
-        if (animando) _PulseAnimation(color: color),
-        Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [color, color.withOpacity(0.7)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  )
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.navigation, color: Colors.white, size: 12),
-                      const SizedBox(width: 4),
-                      Text(
-                        nombre,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Text(
-                    "EN MOVIMIENTO",
-                    style: TextStyle(fontSize: 7, color: Colors.white70, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    hora,
-                    style: const TextStyle(fontSize: 9, color: Colors.white, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.6),
-                    blurRadius: 12,
-                    spreadRadius: 3,
-                  )
-                ],
-              ),
-              child: const Icon(Icons.person, color: Colors.white, size: 16),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _PulseAnimation extends StatefulWidget {
-  final Color color;
-  const _PulseAnimation({required this.color});
-
-  @override
-  State<_PulseAnimation> createState() => _PulseAnimationState();
-}
-
-class _PulseAnimationState extends State<_PulseAnimation> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final scale = 1 + (_controller.value * 1.5);
-        final opacity = 0.4 * (1 - _controller.value);
-        
-        return Container(
-          width: 40 * scale,
-          height: 40 * scale,
-          decoration: BoxDecoration(
-            color: widget.color.withOpacity(opacity),
-            shape: BoxShape.circle,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _ParticulaAnimada extends StatefulWidget {
-  final Color color;
-  const _ParticulaAnimada({required this.color});
-
-  @override
-  State<_ParticulaAnimada> createState() => _ParticulaAnimadaState();
-}
-
-class _ParticulaAnimadaState extends State<_ParticulaAnimada> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          width: 12 + (8 * _controller.value),
-          height: 12 + (8 * _controller.value),
-          decoration: BoxDecoration(
-            color: widget.color.withOpacity(0.6 * (1 - _controller.value)),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withOpacity(0.4),
-                blurRadius: 8,
-                spreadRadius: 2,
-              )
-            ],
-          ),
-        );
-      },
     );
   }
 }
