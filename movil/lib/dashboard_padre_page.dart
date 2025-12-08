@@ -24,7 +24,7 @@ class DashboardPadrePage extends StatefulWidget {
 }
 
 class _DashboardPadrePageState extends State<DashboardPadrePage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final MapController _mapController = MapController();
 
   // Datos
@@ -69,6 +69,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animController =
         AnimationController(vsync: this, duration: const Duration(seconds: 8))
           ..addListener(() {
@@ -88,9 +89,21 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
     _cargarPerfil();
     _actualizarDatos();
     _timerActualizacion = Timer.periodic(
-      const Duration(seconds: 10),
+      const Duration(seconds: 5),
       (t) => _actualizarDatos(),
     );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    setState(() {
+      _isInForeground = state == AppLifecycleState.resumed;
+    });
+
+    if (_isInForeground) {
+      _actualizarDatos();
+    }
   }
 
   @override
@@ -155,6 +168,13 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
       if (response.statusCode == 200) {
         final List<dynamic> datosHijos = jsonDecode(response.body);
         _procesarDatosMapa(datosHijos);
+
+        // Revisar alertas y confirmar si es necesario
+        for (var hijo in datosHijos) {
+          if (hijo['estado_alerta'] == 'alerta_enviada' && _isInForeground) {
+            _confirmarAlerta(hijo['device_id']);
+          }
+        }
 
         if (mounted) {
           setState(() {

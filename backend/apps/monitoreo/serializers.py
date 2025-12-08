@@ -36,7 +36,7 @@ class DashboardHijoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Nino
         fields = [
-            'device_id', 'nombre', 'last_status', 'ultima_actualizacion',
+            'device_id', 'nombre', 'last_status', 'estado_alerta', 'ultima_actualizacion',
             'ubicacion_actual', 'poligono_kinder', 'nombre_kinder', 'bateria'
         ]
 
