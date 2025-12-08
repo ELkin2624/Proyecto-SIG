@@ -17,7 +17,7 @@ class NinoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Nino
-        fields = ['id', 'nombre', 'device_id', 'activo', 'last_status', 'institucion', 'institucion_nombre']
+        fields = ['id', 'nombre', 'device_id', 'activo', 'last_status', 'estado_alerta', 'institucion', 'institucion_nombre']
 
 class UbicacionUpdateSerializer(serializers.Serializer):
     # Este no es un modelo, es solo para validar lo que manda el celular
@@ -35,7 +35,7 @@ class DashboardHijoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Nino
         fields = [
-            'device_id', 'nombre', 'last_status', 'ultima_actualizacion',
+            'device_id', 'nombre', 'last_status', 'estado_alerta', 'ultima_actualizacion',
             'ubicacion_actual', 'poligono_kinder', 'nombre_kinder'
         ]
 
