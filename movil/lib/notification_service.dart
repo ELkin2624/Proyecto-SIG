@@ -1,3 +1,4 @@
+// movil/lib/notification_service.dart
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
@@ -25,19 +26,20 @@ class NotificationService {
     // Configuración de la Alerta (Sonido, Vibración, Importancia Máxima)
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-      'high_importance_channel', // ID del canal
-      'Alertas de Seguridad', // Nombre del canal visible para el usuario
-      channelDescription: 'Canal para alertas críticas de zona segura',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
-      icon: '@mipmap/ic_launcher',
-      enableVibration: true,
-      playSound: true,
-    );
+          'high_importance_channel', // ID del canal
+          'Alertas de Seguridad', // Nombre del canal visible para el usuario
+          channelDescription: 'Canal para alertas críticas de zona segura',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+          icon: '@mipmap/ic_launcher',
+          enableVibration: true,
+          playSound: true,
+        );
 
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+    );
 
     // Mostrar la notificación
     await flutterLocalNotificationsPlugin.show(

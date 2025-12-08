@@ -7,7 +7,9 @@ from .views import (
     MisHijosListView,
     HistorialRutaView,
     DashboardPadreUnificadoView,
-    InstitucionViewSet
+    DashboardPadreUnificadoView,
+    InstitucionViewSet,
+    ConfirmarAlertaView
 )
 
 # Router para ViewSets (CRUD automático)
@@ -20,6 +22,7 @@ urlpatterns = [
     path('mis-hijos/', MisHijosListView.as_view()),
     path('historial/<str:device_id>/', HistorialRutaView.as_view()),
     path('dashboard-unificado/', DashboardPadreUnificadoView.as_view()),
+    path('confirmar-alerta/', ConfirmarAlertaView.as_view(), name='confirmar-alerta'),
 
     # Incluir rutas del router (CRUD instituciones)
     path('', include(router.urls)),

@@ -28,6 +28,18 @@ class Nino(models.Model):
     activo = models.BooleanField(default=True)
     last_status = models.CharField(max_length=50, blank=True, help_text="Último estado reportado", null=True)
 
+    ESTADO_ALERTA_CHOICES = [
+        ("normal", "Normal"),
+        ("alerta_enviada", "Alerta Enviada"),
+        ("alerta_confirmada", "Alerta Confirmada"),
+    ]
+    estado_alerta = models.CharField(
+        max_length=20,
+        choices=ESTADO_ALERTA_CHOICES,
+        default="normal",
+        help_text="Estado de alerta del niño"
+    )
+
     institucion = models.ForeignKey(Institucion, on_delete=models.SET_NULL, null=True, related_name='alumnos')
     
     ultima_ubicacion = models.PointField(srid=4326, blank=True, null=True)

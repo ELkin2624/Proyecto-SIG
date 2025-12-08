@@ -1,9 +1,11 @@
 // movil/lib/home_page.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'modo_nino_page.dart';
 import 'login_page.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'notification_service.dart';
+import 'QR_scanner_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,23 +15,70 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final TextEditingController _idController = TextEditingController(text: "android123");
+  final TextEditingController _idController = TextEditingController(
+    text: "android123",
+  );
 
-// Notificaciones de alerta
+  // Notificaciones de alerta
   @override
   void initState() {
     super.initState();
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {      
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (message.notification != null) {
         NotificationService().mostrarNotificacion(
           message.notification!.title ?? "ALERTA",
-          message.notification!.body ?? "Atención requerida"
+          message.notification!.body ?? "Atención requerida",
         );
       }
     });
   }
 
-// Interfaz de selección de modo
+  Future<void> _scanQRCode() async {
+    if (!mounted) return;
+
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+    );
+
+    if (result != null && mounted) {
+      try {
+        // El QR contiene un JSON con child_id y token
+        final data = jsonDecode(result);
+        final childId = data['child_id'] as String?;
+        // {
+        // "child_id":"12345678"
+        // }
+
+        if (childId != null) {
+          setState(() {
+            _idController.text = childId;
+          });
+
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('❌ QR inválido: Faltan datos'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ Error al leer QR: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // Interfaz de selección de modo
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -41,7 +90,8 @@ class _HomePageState extends State<HomePage> {
           children: [
             const Icon(Icons.security, size: 80, color: Colors.blue),
             const SizedBox(height: 20),
-            const Text("SafeKid SIG",
+            const Text(
+              "SafeKid SIG",
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
@@ -49,10 +99,13 @@ class _HomePageState extends State<HomePage> {
             // Campo de texto (SOLO PARA MODO NIÑO)
             TextField(
               controller: _idController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: "ID del Dispositivo (Solo para Niño)",
                 border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.qr_code),
+                prefixIcon: IconButton(
+                  icon: const Icon(Icons.qr_code),
+                  onPressed: _scanQRCode
+                ),
               ),
             ),
             const SizedBox(height: 30),
@@ -72,7 +125,8 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => SafeKidHome(deviceId: _idController.text),
+                      builder: (context) =>
+                          SafeKidHome(deviceId: _idController.text),
                     ),
                   );
                 },
@@ -96,9 +150,7 @@ class _HomePageState extends State<HomePage> {
                   // AHORA REDIRIGE AL LOGIN
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const LoginPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 },
                 icon: const Icon(Icons.admin_panel_settings), // Icono de Admin
