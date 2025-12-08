@@ -4,7 +4,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from rest_framework import status
+from rest_framework import status, viewsets, permissions
+from rest_framework.permissions import AllowAny, IsAdminUser
+from .models import Usuario
+from .serializers import UsuarioSerializer
 
 class RegistrarFcmTokenView(APIView):
     permission_classes = [IsAuthenticated]
@@ -88,3 +91,44 @@ def obtener_usuario_actual(request):
         "es_tutor": usuario.es_tutor,
         "es_admin_institucion": usuario.es_admin_institucion,
     }, status=status.HTTP_200_OK)
+
+
+class UsuarioViewSet(viewsets.ModelViewSet):
+    """
+    CRUD completo de usuarios/tutores
+
+    Endpoints:
+    - GET /api/usuarios/ - Listar todos (público)
+    - POST /api/usuarios/ - Crear nuevo (solo admin)
+    - GET /api/usuarios/{id}/ - Ver detalle (público)
+    - PUT /api/usuarios/{id}/ - Editar completo (solo admin)
+    - PATCH /api/usuarios/{id}/ - Editar parcial (solo admin)
+    - DELETE /api/usuarios/{id}/ - Eliminar (solo admin)
+
+    Filtros:
+    - ?es_tutor=true - Solo tutores
+    - ?es_admin_institucion=true - Solo admins de institución
+    """
+    queryset = Usuario.objects.all()
+    serializer_class = UsuarioSerializer
+
+    def get_permissions(self):
+        """Permitir lectura sin autenticación, pero crear/editar solo para admin"""
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+
+    def get_queryset(self):
+        queryset = Usuario.objects.all()
+
+        # Filtros opcionales desde query params
+        es_tutor = self.request.query_params.get('es_tutor', None)
+        es_admin = self.request.query_params.get('es_admin_institucion', None)
+
+        if es_tutor is not None:
+            queryset = queryset.filter(es_tutor=es_tutor.lower() == 'true')
+
+        if es_admin is not None:
+            queryset = queryset.filter(es_admin_institucion=es_admin.lower() == 'true')
+
+        return queryset.order_by('-date_joined')

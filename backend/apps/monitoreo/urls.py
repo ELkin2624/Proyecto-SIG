@@ -13,13 +13,23 @@ from .views import (
     EstadoMonitoreoView,
     CambiarEstadoMonitoreoView,
     ActivarMonitoreoDispositivoView
+    NinoViewSet,
+    InstitucionViewSet,
+    NinosPorInstitucionView
 )
 
-# Router para ViewSets (CRUD automático)
+# ========================================
+# ROUTER PARA VIEWSETS (CRUD AUTOMÁTICO)
+# ========================================
 router = DefaultRouter()
-router.register(r'instituciones', InstitucionViewSet, basename='institucion')
+router.register(r'ninos', NinoViewSet, basename='nino')  # CRUD Niños (Admin)
+router.register(r'instituciones', InstitucionViewSet, basename='institucion')  # CRUD Instituciones
 
+# ========================================
+# URLS DE MONITOREO
+# ========================================
 urlpatterns = [
+    # Endpoints especiales (no CRUD)
     path('reportar/', ReportarUbicacionView.as_view(), name='reportar-ubicacion'),
     path('mapa-padre/', DatosMapaPadreView.as_view(), name='mapa-padre'),
     path('mis-hijos/', MisHijosListView.as_view()),
@@ -30,6 +40,7 @@ urlpatterns = [
     path('estado/<str:device_id>/', EstadoMonitoreoView.as_view()),
     path('cambiar-estado/', CambiarEstadoMonitoreoView.as_view()),
     path('activar-dispositivo/', ActivarMonitoreoDispositivoView.as_view()),
+    path('instituciones/<int:institucion_id>/ninos/', NinosPorInstitucionView.as_view(), name='ninos-por-institucion'),
     # Incluir rutas del router (CRUD instituciones)
     path('', include(router.urls)),
 ]
