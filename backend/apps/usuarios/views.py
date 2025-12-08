@@ -59,6 +59,7 @@ def login_view(request):
     expires_in = 30 * 24 * 60 * 60  # 30 días
 
     return Response({
+        "access": access_token,
         "access_token": access_token,
         "token_type": "Bearer",
         "expires_in": expires_in

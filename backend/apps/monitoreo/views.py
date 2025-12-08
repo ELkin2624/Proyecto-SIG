@@ -45,14 +45,26 @@ class ReportarUbicacionView(APIView):
             except Nino.DoesNotExist:
                 return Response({"error": "Niño no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
-            # 2. Crear el Punto Geográfico
+            # Manejo de SOS
+            es_sos = request.data.get('es_sos', False)
+            # Crear el Punto Geográfico
             punto_actual = Point(lon, lat, srid=4326) # OJO: El orden es (Longitud, Latitud)
-
             # 3. VERIFICACIÓN DE GEOCERCA (El corazón del proyecto)
             esta_seguro = True
             mensaje = "Seguro"
+            titulo_alerta = "ALERTA DE SEGURIDAD"
 
-            if nino.institucion and nino.institucion.area:
+            if es_sos:
+                esta_seguro = False
+                mensaje = "🚨 ¡SOS! AYUDA REQUERIDA 🚨"
+                titulo_alerta = "🆘 EMERGENCIA SOS"
+                enviar_alerta_push(
+                    token_fcm=nino.tutor.fcm_token,
+                    titulo=titulo_alerta,
+                    cuerpo=f"{nino.nombre} ha activado una alerta SOS. Ubicación actual registrada."
+                )
+
+            elif nino.institucion and nino.institucion.area:
                 # Preguntamos: ¿El polígono del kinder CONTIENE al punto actual?
                 if nino.institucion.area.contains(punto_actual):
                     esta_seguro = True
@@ -122,6 +134,13 @@ class DatosMapaPadreView(APIView):
             # 2. Polígono del Kinder (La Geocerca)
             "poligono_kinder": []
         }
+
+        # Añadir batería última conocida (si existe)
+        try:
+            ultima_hist = HistorialUbicacion.objects.filter(nino=nino).order_by('-timestamp').first()
+            data["bateria"] = ultima_hist.bateria if ultima_hist and ultima_hist.bateria is not None else None
+        except Exception:
+            data["bateria"] = None
 
         # Si tiene kinder asignado y dibujo, extraemos las coordenadas
         if nino.institucion and nino.institucion.area:

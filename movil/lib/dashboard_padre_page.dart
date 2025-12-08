@@ -1375,6 +1375,64 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
     );
   }
 
+  Widget _buildBatteryWidget(dynamic bateriaValue, Color color) {
+    // bateriaValue puede ser int o null
+    if (bateriaValue == null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.battery_unknown, color: Colors.grey.shade600, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            'N/D',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+        ],
+      );
+    }
+
+    int bateria = 0;
+    try {
+      bateria = (bateriaValue is int)
+          ? bateriaValue
+          : int.parse(bateriaValue.toString());
+    } catch (e) {
+      bateria = 0;
+    }
+
+    Color nivelColor;
+    IconData icono;
+    if (bateria <= 10) {
+      nivelColor = Colors.red;
+      icono = Icons.battery_alert;
+    } else if (bateria <= 30) {
+      nivelColor = Colors.orange;
+      icono = Icons.battery_2_bar;
+    } else if (bateria <= 60) {
+      nivelColor = Colors.yellow.shade700;
+      icono = Icons.battery_6_bar;
+    } else {
+      nivelColor = Colors.green;
+      icono = Icons.battery_full;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icono, color: nivelColor, size: 16),
+        const SizedBox(width: 6),
+        Text(
+          '$bateria%',
+          style: TextStyle(
+            color: nivelColor,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDrawer() {
     return Drawer(
       child: Container(
@@ -1495,13 +1553,21 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
                       ),
                     ],
                   ),
-                  trailing: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.gps_fixed, color: color, size: 18),
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildBatteryWidget(hijo['bateria'], color),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.gps_fixed, color: color, size: 18),
+                      ),
+                    ],
                   ),
                   onTap: () => _centrarEnHijo(hijo),
                 ),

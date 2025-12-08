@@ -1,3 +1,4 @@
+// movil/lib/widgets/marcador_movimiento_widget.dart
 import 'package:flutter/material.dart';
 import 'pulse_animation_widget.dart';
 

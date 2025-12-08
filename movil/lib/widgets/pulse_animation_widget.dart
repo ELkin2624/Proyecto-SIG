@@ -1,5 +1,5 @@
+// movil/lib/widgets/pulse_animation_widget.dart
 import 'package:flutter/material.dart';
-
 
 class PulseAnimation extends StatefulWidget {
   final Color color;

@@ -30,14 +30,24 @@ class UbicacionUpdateSerializer(serializers.Serializer):
 class DashboardHijoSerializer(serializers.ModelSerializer):
     ubicacion_actual = serializers.SerializerMethodField()
     poligono_kinder = serializers.SerializerMethodField()
+    bateria = serializers.SerializerMethodField()
     nombre_kinder = serializers.ReadOnlyField(source='institucion.nombre')
 
     class Meta:
         model = Nino
         fields = [
             'device_id', 'nombre', 'last_status', 'estado_alerta', 'ultima_actualizacion',
-            'ubicacion_actual', 'poligono_kinder', 'nombre_kinder'
+            'ubicacion_actual', 'poligono_kinder', 'nombre_kinder', 'bateria'
         ]
+
+    
+    def get_bateria(self, obj):
+        # Intentamos obtener la última entrada de historial para este niño
+        try:
+            ultima = HistorialUbicacion.objects.filter(nino=obj).order_by('-timestamp').first()
+            return ultima.bateria if ultima and ultima.bateria is not None else None
+        except Exception:
+            return None
 
     def get_ubicacion_actual(self, obj):
         if obj.ultima_ubicacion:
