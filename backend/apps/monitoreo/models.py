@@ -27,6 +27,8 @@ class Nino(models.Model):
     device_id = models.CharField(max_length=100, unique=True, help_text="ID único del dispositivo del niño")
     activo = models.BooleanField(default=True)
     last_status = models.CharField(max_length=50, blank=True, help_text="Último estado reportado", null=True)
+    
+    monitoreo_activo = models.BooleanField(default=False, help_text="Indica si el monitoreo está activo para este niño")
 
     ESTADO_ALERTA_CHOICES = [
         ("normal", "Normal"),
@@ -55,6 +57,7 @@ class HistorialUbicacion(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
     fuera_de_zona = models.BooleanField(default=False)
     bateria = models.IntegerField(null=True, blank=True)
+    conexion = models.CharField(max_length=20, blank=True, null=True)
     
     class Meta:
         indexes = [

@@ -15,6 +15,7 @@ import 'widgets/marcador_interes_widget.dart';
 import 'widgets/marcador_movimiento_widget.dart';
 import 'widgets/particula_animada_widget.dart';
 import 'models/ruta_historial.dart';
+import 'dart:math' as math;
 
 class DashboardPadrePage extends StatefulWidget {
   const DashboardPadrePage({super.key});
@@ -226,9 +227,85 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
         nuevosMarcadores.add(
           Marker(
             point: LatLng(lat, lng),
-            width: 100,
-            height: 100,
-            child: UbicacionActualMarker(nombre: hijo['nombre'], color: color),
+            width: 120,
+            height: 120,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 1. EL AVATAR (CÍRCULO CON FOTO/ICONO)
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: color, width: 3),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.face,
+                      color: color,
+                      size: 40,
+                    ), // Aquí iría la foto del niño si tuvieras
+                  ),
+                ),
+
+                // 2. LA BURBUJA DE ESTADO (Batería + Conexión)
+                Positioned(
+                  right: 20, // Ajusta según el ancho
+                  bottom: 25,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _getColorBateria(
+                        hijo['info_dispositivo']?['bateria'],
+                      ), // Color según batería (Verde/Rojo)
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Icono de conexión pequeño
+                        Icon(
+                          _getIconoConexion(
+                            hijo['info_dispositivo']?['conexion'],
+                          ),
+                          color: Colors.white,
+                          size: 10,
+                        ),
+                        const SizedBox(width: 4),
+                        // Texto Batería
+                        Text(
+                          "${hijo['info_dispositivo']?['bateria'] ?? '?'}%",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // 3. EL TRIANGULITO DE ABAJO (Para que parezca un pin)
+                Positioned(
+                  bottom: 25,
+                  child: Icon(Icons.arrow_drop_down, color: color, size: 30),
+                ),
+              ],
+            ),
           ),
         );
       }
@@ -690,7 +767,8 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
                     ),
                     PolygonLayer(polygons: _geocercas),
                     if (_mostrandoHistorial) ..._construirCapasHistorial(),
-                    if (!_mostrandoHistorial) MarkerLayer(markers: _marcadores),
+                    if (!_mostrandoHistorial) 
+                      MarkerLayer(markers: _dispersarMarcadoresVisualmente(_marcadores),),
                   ],
                 ),
 
@@ -1400,7 +1478,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
       bateria = 0;
     }
 
-    Color nivelColor;
+    Color nivelColor = _getColorBateria(bateria);
     IconData icono;
     if (bateria <= 10) {
       nivelColor = Colors.red;
@@ -1504,72 +1582,156 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
             ..._listaHijosJson.asMap().entries.map((entry) {
               var hijo = entry.value;
               Color color = _colores[entry.key % _colores.length];
+              
               return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
-                child: ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
+                child: Column(
+                  children: [
+                    // FILA SUPERIOR: Foto + Nombre + Batería
+                    Row(
+                      children: [
+                        // Avatar
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.face, color: color, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        
+                        // Nombre y Estado
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                hijo['nombre'],
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      hijo['last_status'] ?? 'Sin datos',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // Batería (Arriba a la derecha)
+                        _buildBatteryWidget(hijo['bateria'], color),
+                      ],
                     ),
-                    child: Icon(Icons.face, color: color, size: 24),
-                  ),
-                  title: Text(
-                    hijo['nombre'],
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                    
+                    const SizedBox(height: 12),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
+
+                    // FILA INFERIOR: Botones de Acción
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // Botón Centrar Mapa
+                        InkWell(
+                          onTap: () => _centrarEnHijo(hijo),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.gps_fixed, size: 20, color: Colors.blueGrey),
+                          ),
+                        ),
+                        
+                        const SizedBox(width: 10),
+
+                        // BOTÓN INTERRUPTOR (ACTIVAR/DETENER) - AQUI ESTABA EL ERROR
+                        SizedBox(
+                          height: 36, // Altura controlada
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: (hijo['monitoreo_activo'] == true) ? Colors.red.shade50 : Colors.green.shade50,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              side: BorderSide(
+                                color: (hijo['monitoreo_activo'] == true) ? Colors.red : Colors.green,
+                              ),
+                            ),
+                            onPressed: () async {
+                              final deviceId = hijo['device_id'];
+                              final estaActivo = hijo['monitoreo_activo'] == true;
+                              
+                              if (estaActivo) {
+                                // Confirmación para apagar
+                                final confirmado = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Detener rastreo'),
+                                    content: const Text('¿Seguro que deseas detener el rastreo?'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+                                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Detener', style: TextStyle(color: Colors.red))),
+                                    ],
+                                  ),
+                                );
+                                if (confirmado == true) await _cambiarEstadoMonitoreo(deviceId, false);
+                              } else {
+                                await _cambiarEstadoMonitoreo(deviceId, true);
+                              }
+                            },
+                            child: Row(
+                              children: [
+                                Icon(
+                                  (hijo['monitoreo_activo'] == true) ? Icons.stop_circle_outlined : Icons.play_circle_outline,
+                                  size: 18,
+                                  color: (hijo['monitoreo_activo'] == true) ? Colors.red : Colors.green,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  (hijo['monitoreo_activo'] == true) ? 'DETENER' : 'ACTIVAR',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: (hijo['monitoreo_activo'] == true) ? Colors.red : Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  subtitle: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          hijo['last_status'] ?? 'Sin datos',
-                          style: const TextStyle(fontSize: 11),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  trailing: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _buildBatteryWidget(hijo['bateria'], color),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.gps_fixed, color: color, size: 18),
-                      ),
-                    ],
-                  ),
-                  onTap: () => _centrarEnHijo(hijo),
+                  ],
                 ),
               );
             }),
@@ -1597,4 +1759,125 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
       ),
     );
   }
+
+  Future<void> _cambiarEstadoMonitoreo(String deviceId, bool nuevoEstado) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+    if (token == null) return;
+
+    try {
+      final url = Uri.parse("${ApiConfig.baseUrl}/api/monitoreo/cambiar-estado/");
+      final response = await http.post(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "device_id": deviceId,
+          // backend debe aceptar 'activo' como boolean o string 'true'
+          "activo": nuevoEstado,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // Éxito: refrescamos datos para actualizar UI
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(nuevoEstado ? 'Activando rastreo...' : 'Deteniendo rastreo...')),
+        );
+        await _actualizarDatos();
+      } else {
+        final body = response.body;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cambiar estado: ${response.statusCode}')),
+        );
+        print('Cambiar estado error: $body');
+      }
+    } catch (e) {
+      print("Error cambiando estado: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error de red al cambiar estado')),
+      );
+    }
+  }
+
+  // Función mágica para separar marcadores encimados
+  List<Marker> _dispersarMarcadoresVisualmente(
+    List<Marker> marcadoresOriginales,
+  ) {
+    if (marcadoresOriginales.isEmpty) return [];
+
+    // Copia para no modificar los datos reales, solo lo visual
+    List<Marker> marcadoresFinales = [];
+    double radioDeSeparacion =
+        0.00015; // Aprox 30 metros en el mapa (ajusta según zoom)
+
+    // Agrupamos marcadores que están MUY cerca (casi idénticos)
+    Map<String, List<Marker>> grupos = {};
+
+    for (var m in marcadoresOriginales) {
+      // Usamos una clave de ubicación redondeada para agrupar
+      // Redondeamos a 4 decimales (aprox 11 metros) para detectar colisiones
+      String key =
+          "${m.point.latitude.toStringAsFixed(4)},${m.point.longitude.toStringAsFixed(4)}";
+      if (!grupos.containsKey(key)) {
+        grupos[key] = [];
+      }
+      grupos[key]!.add(m);
+    }
+
+    // Procesamos cada grupo
+    grupos.forEach((key, lista) {
+      if (lista.length == 1) {
+        // Si está solo, lo dejamos tal cual
+        marcadoresFinales.add(lista.first);
+      } else {
+        // Si hay varios en el mismo sitio, los separamos en círculo
+        double anguloPaso =
+            (2 * 3.14159) / lista.length; // 360 grados / cantidad
+
+        for (int i = 0; i < lista.length; i++) {
+          Marker m = lista[i];
+          // Calculamos nueva posición en círculo
+          double angulo = i * anguloPaso;
+          double nuevaLat =
+              m.point.latitude +
+              (radioDeSeparacion *
+                  0.7 *
+                  math.sin(angulo)); // 0.7 compensa aspecto lat/lng
+          double nuevaLng =
+              m.point.longitude + (radioDeSeparacion * math.cos(angulo));
+
+          // Creamos un nuevo marcador desplazado visualmente
+          // (Mantenemos el child y diseño original, solo cambiamos point)
+          marcadoresFinales.add(
+            Marker(
+              point: LatLng(nuevaLat, nuevaLng),
+              width: m.width,
+              height: m.height,
+              child: m.child,
+            ),
+          );
+
+          // Opcional: Podríamos agregar una línea que conecte el punto real con el desplazado
+          // pero para la tesis, solo separarlos es suficiente.
+        }
+      }
+    });
+
+    return marcadoresFinales;
+  }
+}
+
+Color _getColorBateria(int? nivel) {
+  if (nivel == null) return Colors.grey;
+  if (nivel > 50) return Colors.green; // Batería bien
+  if (nivel > 20) return Colors.orange; // Batería media
+  return Colors.red; // Batería crítica
+}
+
+IconData _getIconoConexion(String? conexion) {
+  if (conexion == 'WIFI') return Icons.wifi;
+  if (conexion == 'DATOS') return Icons.signal_cellular_alt;
+  return Icons.signal_wifi_off; // Offline
 }

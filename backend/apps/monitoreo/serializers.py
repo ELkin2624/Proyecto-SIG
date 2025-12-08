@@ -26,21 +26,25 @@ class UbicacionUpdateSerializer(serializers.Serializer):
     longitud = serializers.FloatField()
     fcm_token = serializers.CharField(required=False, allow_blank=True)
     timestamp = serializers.DateTimeField(required=False)
-
+    bateria = serializers.IntegerField(required=False, allow_null=True)
+    conexion = serializers.CharField(required=False, allow_blank=True)
+    es_sos = serializers.BooleanField(required=False, default=False)
+    
 class DashboardHijoSerializer(serializers.ModelSerializer):
     ubicacion_actual = serializers.SerializerMethodField()
     poligono_kinder = serializers.SerializerMethodField()
     bateria = serializers.SerializerMethodField()
     nombre_kinder = serializers.ReadOnlyField(source='institucion.nombre')
+    info_dispositivo = serializers.SerializerMethodField()
 
     class Meta:
         model = Nino
         fields = [
             'device_id', 'nombre', 'last_status', 'estado_alerta', 'ultima_actualizacion',
-            'ubicacion_actual', 'poligono_kinder', 'nombre_kinder', 'bateria'
+            'ubicacion_actual', 'poligono_kinder', 'nombre_kinder', 'bateria',
+            'info_dispositivo', 'monitoreo_activo'
         ]
 
-    
     def get_bateria(self, obj):
         # Intentamos obtener la última entrada de historial para este niño
         try:
@@ -48,6 +52,16 @@ class DashboardHijoSerializer(serializers.ModelSerializer):
             return ultima.bateria if ultima and ultima.bateria is not None else None
         except Exception:
             return None
+        
+    def get_info_dispositivo(self, obj):
+        # Buscamos el último historial para sacar batería y conexión
+        ultimo = HistorialUbicacion.objects.filter(nino=obj).order_by('-timestamp').first()
+        if ultimo:
+            return {
+                "bateria": ultimo.bateria,
+                "conexion": ultimo.conexion
+            }
+        return {"bateria": 0, "conexion": "OFFLINE"}
 
     def get_ubicacion_actual(self, obj):
         if obj.ultima_ubicacion:

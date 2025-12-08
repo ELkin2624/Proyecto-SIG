@@ -65,7 +65,7 @@ class ReportarUbicacionView(APIView):
                 )
 
             elif nino.institucion and nino.institucion.area:
-                # Preguntamos: ¿El polígono del kinder CONTIENE al punto actual?
+                # Preguntamos: ¿El polígono del kinder CONTIENE al punto actual? o usamos intersects si quieres incluir bordes
                 if nino.institucion.area.contains(punto_actual):
                     esta_seguro = True
                     mensaje = "Dentro del Kinder"
@@ -95,7 +95,9 @@ class ReportarUbicacionView(APIView):
             HistorialUbicacion.objects.create(
                 nino=nino,
                 ubicacion=punto_actual,
-                fuera_de_zona=not esta_seguro
+                fuera_de_zona=not esta_seguro,
+                bateria=request.data.get('bateria'), 
+                conexion=request.data.get('conexion')
             )
 
             return Response({
@@ -198,7 +200,41 @@ class DashboardPadreUnificadoView(generics.ListAPIView):
     def get_queryset(self):
         return Nino.objects.filter(tutor=self.request.user)
 
+class EstadoMonitoreoView(APIView):
+    def get(self, request, device_id):
+        try:
+            nino = Nino.objects.get(device_id=device_id)
+            return Response({"activo": nino.monitoreo_activo})
+        except Nino.DoesNotExist:
+            return Response({"activo": False})
 
+class CambiarEstadoMonitoreoView(APIView):
+    permission_classes = [IsAuthenticated] # Solo el padre
+    
+    def post(self, request):
+        device_id = request.data.get('device_id')
+        nuevo_estado = request.data.get('activo') # True/False
+        
+        try:
+            nino = Nino.objects.get(device_id=device_id, tutor=request.user)
+            nino.monitoreo_activo = nuevo_estado
+            nino.save()
+            return Response({"status": "ok", "nuevo_estado": nino.monitoreo_activo})
+        except Nino.DoesNotExist:
+            return Response({"error": "No autorizado"}, status=403)
+
+class ActivarMonitoreoDispositivoView(APIView):
+    def post(self, request):
+        device_id = request.data.get('device_id')
+        activo = request.data.get('activo', True) # Por defecto True (Activar)
+        
+        try:
+            nino = Nino.objects.get(device_id=device_id)
+            nino.monitoreo_activo = activo
+            nino.save()
+            return Response({"status": "ok", "monitoreo_activo": nino.monitoreo_activo})
+        except Nino.DoesNotExist:
+            return Response({"error": "Niño no encontrado"}, status=404)
 # ========================================
 # CRUD DE INSTITUCIONES
 # ========================================

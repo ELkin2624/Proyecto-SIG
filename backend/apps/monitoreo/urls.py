@@ -9,7 +9,10 @@ from .views import (
     DashboardPadreUnificadoView,
     DashboardPadreUnificadoView,
     InstitucionViewSet,
-    ConfirmarAlertaView
+    ConfirmarAlertaView,
+    EstadoMonitoreoView,
+    CambiarEstadoMonitoreoView,
+    ActivarMonitoreoDispositivoView
 )
 
 # Router para ViewSets (CRUD automático)
@@ -24,6 +27,9 @@ urlpatterns = [
     path('dashboard-unificado/', DashboardPadreUnificadoView.as_view()),
     path('confirmar-alerta/', ConfirmarAlertaView.as_view(), name='confirmar-alerta'),
 
+    path('estado/<str:device_id>/', EstadoMonitoreoView.as_view()),
+    path('cambiar-estado/', CambiarEstadoMonitoreoView.as_view()),
+    path('activar-dispositivo/', ActivarMonitoreoDispositivoView.as_view()),
     # Incluir rutas del router (CRUD instituciones)
     path('', include(router.urls)),
 ]
