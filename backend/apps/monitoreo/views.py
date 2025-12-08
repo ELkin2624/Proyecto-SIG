@@ -12,6 +12,25 @@ from datetime import datetime
 from rest_framework import generics, permissions
 from rest_framework.permissions import IsAuthenticated
 
+class ConfirmarAlertaView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        device_id = request.data.get('device_id')
+        if not device_id:
+            return Response({"error": "device_id es requerido"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+             # Solo el padre puede confirmar la alerta de su hijo
+            nino = Nino.objects.get(device_id=device_id, tutor=request.user)
+        except Nino.DoesNotExist:
+            return Response({"error": "Niño no encontrado o no autorizado"}, status=status.HTTP_404_NOT_FOUND)
+        
+        nino.estado_alerta = 'alerta_confirmada'
+        nino.save()
+        
+        return Response({"status": "success", "estado_alerta": nino.estado_alerta})
+
 class ReportarUbicacionView(APIView):
     def post(self, request):
         serializer = UbicacionUpdateSerializer(data=request.data)
@@ -50,16 +69,23 @@ class ReportarUbicacionView(APIView):
                 if nino.institucion.area.contains(punto_actual):
                     esta_seguro = True
                     mensaje = "Dentro del Kinder"
+                    # Si el niño regresa a la zona segura, restablecemos el estado a normal
+                    if nino.estado_alerta != 'normal':
+                        nino.estado_alerta = 'normal'
                 else:
                     esta_seguro = False
                     mensaje = "¡ALERTA! Fuera de zona"
-                    # Obtenemos el token del tutor del niño
-                    if nino.tutor and nino.tutor.fcm_token:
-                        enviar_alerta_push(
-                            token_fcm=nino.tutor.fcm_token,
-                            titulo="🚨 ALERTA DE SEGURIDAD",
-                            cuerpo=f"{nino.nombre} ha salido de la zona segura ({nino.institucion.nombre})."
-                        )
+                    
+                    # Logica de estados de alerta
+                    # 1. Si ya está confirmada, NO hacemos nada (no enviamos notificacion)
+                    if nino.estado_alerta != 'alerta_confirmada':
+                            if nino.tutor and nino.tutor.fcm_token:
+                                enviar_alerta_push(
+                                    token_fcm=nino.tutor.fcm_token,
+                                    titulo="🚨 ALERTA DE SEGURIDAD",
+                                    cuerpo=f"{nino.nombre} ha salido de la zona segura ({nino.institucion.nombre})."
+                                )
+                            nino.estado_alerta = 'alerta_enviada'
             # 4. Actualizar estado del niño
             nino.ultima_ubicacion = punto_actual
             nino.last_status = mensaje
@@ -97,6 +123,7 @@ class DatosMapaPadreView(APIView):
             "nombre_nino": nino.nombre,
             "ultima_actualizacion": nino.ultima_actualizacion,
             "estado": nino.last_status,
+            "estado_alerta": nino.estado_alerta,
 
             # 1. Ubicación del Niño
             "ubicacion_actual": {

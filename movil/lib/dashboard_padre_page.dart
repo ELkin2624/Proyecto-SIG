@@ -55,6 +55,9 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
   // Línea de tiempo interactiva
   bool _lineaTiempoExpandida = false;
 
+  // Control de ciclo de vida
+  bool _isInForeground = true;
+
   final List<Color> _colores = [
     const Color(0xFF2196F3), // Azul Material
     const Color(0xFFE91E63), // Rosa
@@ -92,6 +95,7 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timerActualizacion?.cancel();
     _animController?.dispose();
     _speedController?.dispose();
@@ -161,6 +165,29 @@ class _DashboardPadrePageState extends State<DashboardPadrePage>
       }
     } catch (e) {
       print("Error red: $e");
+    }
+  }
+
+  Future<void> _confirmarAlerta(String deviceId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('jwt_token');
+    if (token == null) return;
+
+    try {
+      final url = Uri.parse(
+        "${ApiConfig.baseUrl}/api/monitoreo/confirmar-alerta/",
+      );
+      await http.post(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({"device_id": deviceId}),
+      );
+      print("Alerta confirmada para $deviceId");
+    } catch (e) {
+      print("Error confirmando alerta: $e");
     }
   }
 
